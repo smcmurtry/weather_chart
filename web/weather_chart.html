@@ -7,7 +7,12 @@
   <script src="queue.js"></script>
   <link rel="stylesheet" type="text/css" href="weather_chart.css"/>
 </head>
-<body></body>
+<body>
+  <div><h2>Yellowknife's Weather</h2></div>
+  <svg class='temperature-chart'></svg>
+  <!-- <div>Precipitation</div> -->
+  <svg class='precipitation-chart'></svg>
+</body>
 
 <script>
 
@@ -15,13 +20,15 @@ var svgT, day_width;
 var axis_strokewidth = 3,
     x_label_height = -25,
     y_label_translate = 8,
-    max_p_ticks = 5;
+    max_p_ticks = 5,
+    text_offset_y = 5,
+    font_size = +d3.select('body').style('font-size').slice(0, -2);
 
 var parseDate1 = d3.time.format("%Y-%m-%d").parse;
 
 var margin_right = 60, 
     margin_left = 60,
-    width = 1400 - margin_left - margin_right; 
+    width = 2100 - margin_left - margin_right; 
 
 var marginT = {top: 50, bottom: 50},
     heightT = 700 - marginT.top - marginT.bottom;
@@ -70,7 +77,6 @@ function ready(error, almanac, precipitation, daily_weather) {
     first_day_flag = false;
     cumulative_precip += d.h_all_precip;
     d.cumulative_precip = cumulative_precip;
-    // console.log(precipitation[d.date.getMonth()].h_all_precip)
     precip_month.push({'date': d.date, 
                        'cumulative_precip': cumulative_precip, 
                        'avg_total_precip': precipitation[d.date.getMonth()].h_all_precip});
@@ -93,8 +99,7 @@ function ready(error, almanac, precipitation, daily_weather) {
 
   day_width = x(daily_weather[1].date) - x(daily_weather[0].date); 
 
-  svgT = d3.select('body')
-    .append("svg")
+  svgT = d3.select('.temperature-chart')
     .attr("width", width + margin_left + margin_right)
     .attr("height", heightT + marginT.top + marginT.bottom)
     .append("g")
@@ -139,8 +144,7 @@ function ready(error, almanac, precipitation, daily_weather) {
 
   update_T_tick_lines();
 
-  svgP = d3.select('body')
-    .append("svg")
+  svgP = d3.select('.precipitation-chart')
     .attr("width", width + margin_left + margin_right)
     .attr("height", heightP + marginP.top + marginP.bottom)
     .append("g")
@@ -174,7 +178,7 @@ function ready(error, almanac, precipitation, daily_weather) {
     .attr("d", area);
 
   update_P_tick_lines();
-  
+
   svgP.selectAll('.p-line')
     .data(precip_months)
     .enter()
@@ -189,6 +193,47 @@ function ready(error, almanac, precipitation, daily_weather) {
     .attr("class", "a-line")
     .attr("d", avg_line);
 
+  svgP.selectAll('.normal-text')
+    .data(precipitation)
+    .enter()
+    .append('text')
+    .attr('x', function(d) { return x(new Date(2014, +d.month-1, 1)) + day_width; })
+    .attr('y', function(d) { return P(+d.h_all_precip) - text_offset_y; })
+    .text(function(d) { return +d.h_all_precip; });
+
+
+  var actual_text_g = svgP.selectAll('.actual-text')
+    .data(daily_weather)
+    .enter()
+    .append('g')
+    .attr('class', 'actual-text');
+
+  actual_text_g.append('text')
+    .attr('class', 'text-for-width-calc')
+    .attr('display', 'block')
+    .attr('fill', 'white')
+    .text(function(d) { return d3.round(+d.cumulative_precip, 1); })
+    .each(function(d) { d.width = this.getBBox().width; });
+
+  actual_text_g.append('rect')
+    .attr('display', function(d) { return isLastDay(d.date) ? 'block' : 'none'; })
+    .attr('text-anchor', function(d) { return d.date.getDate() > 15 ? 'end' : 'start'; })
+    .attr('x', function(d) { return d.date.getDate() > 15 ? x(d.date) - d.width : x(d.date); })
+    .attr('y', function(d) { return P(+d.cumulative_precip) - text_offset_y - font_size; })
+    .attr('width', function(d) { return d.width; })
+    .attr('height', font_size)
+    .attr('opacity', 1)
+    .attr('fill', 'white')
+
+  actual_text_g.append('text')
+    .attr('x', function(d) { return x(d.date); })
+    .attr('y', function(d) { return P(+d.cumulative_precip) - text_offset_y; })
+    .attr('display', function(d) { return isLastDay(d.date) ? 'block' : 'none'; })
+    .attr('text-anchor', function(d) { return d.date.getDate() > 15 ? 'end' : 'start'; })
+    .text(function(d) { return d3.round(+d.cumulative_precip, 1); })
+
+
+  // console.log(d3.selectAll('.actual-text text').getBBox())
 
   update_x_tick_lines_T();
   update_x_tick_lines_P();
@@ -212,6 +257,10 @@ function add_y_axes(svg, axis) {
     .call(axis.orient("right"))
     .selectAll('text')
     .attr("transform", "translate(" + y_label_translate + ",0)");
+}
+
+function isLastDay(dt) {
+    return new Date(dt.getTime() + 86400000).getDate() === 1;
 }
 
 function update_T_tick_lines() {
