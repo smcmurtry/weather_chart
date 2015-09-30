@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <title>Weather Chart</title>
+  <meta name="description" content="Weather Chart.">
+  <script src="d3.v3.min.js"></script>
+  <script src="queue.js"></script>
+  <link rel="stylesheet" type="text/css" href="weather_chart.css"/>
+</head>
+<body></body>
+
+<script>
+
+var svgT, day_width;
+var axis_strokewidth = 3,
+    x_label_height = -25,
+    y_label_translate = 8,
+    max_p_ticks = 5;
+
+var parseDate1 = d3.time.format("%Y-%m-%d").parse;
+
+var margin_right = 60, 
+    margin_left = 60,
+    width = 1400 - margin_left - margin_right; 
+
+var marginT = {top: 50, bottom: 50},
+    heightT = 700 - marginT.top - marginT.bottom;
+
+var marginP = {top: 50, bottom: 50},
+    heightP = 200 - marginP.top - marginP.bottom;
+
+queue()
+  .defer(d3.csv, "../data/almanac/yk_clean.csv")
+  .defer(d3.csv, "../data/precipitation/yk_clean.csv")
+  .defer(d3.csv, "../data/daily_weather/yk_clean.csv")
+  .await(ready);
+
+var T = d3.scale.linear().range([heightT, 0]);
+var P = d3.scale.linear().range([heightP, 0]);
+var x = d3.time.scale().range([0, width]);
+
+var tAxis = d3.svg.axis().scale(T).tickSize(0)
+  .tickFormat(function(d) { return d + '℃'; });
+
+var pAxis = d3.svg.axis().scale(P).tickSize(0).ticks(max_p_ticks);
+  // .tickFormat(function(d) { return d + 'mm'; });
+
+var xAxis = d3.svg.axis().scale(x)
+  .orient("bottom").tickSize(0)
+  .tickFormat(x_formatter);
+
+function ready(error, almanac, precipitation, daily_weather) {
+
+  var cumulative_precip = 0;
+
+  var precip_months = [],
+      precip_month = [],
+      first_day_flag = true;
+
+  daily_weather.forEach(function(d) {
+    d.date = parseDate1(d.date);
+    d.h_all_precip = +d.h_all_precip;
+    
+    if (d.date.getDate() == 1 && !first_day_flag) {
+      cumulative_precip = 0; 
+      precip_months.push(precip_month);
+      precip_month = [];
+    }
+
+    first_day_flag = false;
+    cumulative_precip += d.h_all_precip;
+    d.cumulative_precip = cumulative_precip;
+    // console.log(precipitation[d.date.getMonth()].h_all_precip)
+    precip_month.push({'date': d.date, 
+                       'cumulative_precip': cumulative_precip, 
+                       'avg_total_precip': precipitation[d.date.getMonth()].h_all_precip});
+  });
+  precip_months.push(precip_month);
+
+  almanac.forEach(function(d) {
+    d.date = new Date(2014, +d.month-1, +d.day);
+  });
+
+  x.domain(d3.extent(daily_weather, function(d) { return d.date; }));
+
+  var maxT = d3.max(almanac, function(d) { return +d.T_max; });
+  var minT = d3.min(almanac, function(d) { return +d.T_min; });
+  var maxP1 = d3.max(precipitation, function(d) { return +d.h_all_precip; });
+  var maxP2 = d3.max(daily_weather, function(d) { return +d.cumulative_precip; });
+
+  T.domain([minT, maxT]);
+  P.domain([0, d3.max([maxP1, maxP2])]);
+
+  day_width = x(daily_weather[1].date) - x(daily_weather[0].date); 
+
+  svgT = d3.select('body')
+    .append("svg")
+    .attr("width", width + margin_left + margin_right)
+    .attr("height", heightT + marginT.top + marginT.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin_left + "," + marginT.top + ")");
+
+  svgT.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + x_label_height + ")")
+    .call(xAxis);
+
+  add_y_axes(svgT, tAxis);
+
+  svgT.selectAll('.maxmin')
+    .data(almanac)
+    .enter()
+    .append('rect')
+    .attr('class', 'maxmin')
+    .attr('x', function(d) { return x(d.date); })
+    .attr('y', function(d) { return T(+d.T_max); })
+    .attr('width', day_width)
+    .attr('height', function(d) { return T(+d.T_min) - T(+d.T_max); });
+
+  svgT.selectAll('.avg')
+    .data(almanac)
+    .enter()
+    .append('rect')
+    .attr('class', 'avg')
+    .attr('x', function(d) { return x(d.date); })
+    .attr('y', function(d) { return T(+d.T_high_avg); })
+    .attr('width', day_width)
+    .attr('height', function(d) { return T(+d.T_low_avg) - T(+d.T_high_avg); });
+
+  svgT.selectAll('.weather')
+    .data(daily_weather)
+    .enter()
+    .append('rect')
+    .attr('class', 'weather')
+    .attr('x', function(d) { return x(d.date); })
+    .attr('y', function(d) { return T(+d.T_high); })
+    .attr('width', day_width)
+    .attr('height', function(d) { return T(+d.T_low) - T(+d.T_high); });
+
+  update_T_tick_lines();
+
+  svgP = d3.select('body')
+    .append("svg")
+    .attr("width", width + margin_left + margin_right)
+    .attr("height", heightP + marginP.top + marginP.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin_left + "," + marginP.top + ")");
+
+  svgP.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + heightP + ")")
+    .call(xAxis);
+
+  add_y_axes(svgP, pAxis);
+
+  var area = d3.svg.area()
+    .x(function(d) { return x(d.date) + day_width/2; })
+    .y0(heightP)
+    .y1(function(d) { return P(d.cumulative_precip); });
+
+  var line = d3.svg.line()
+    .x(function(d) { return x(d.date) + day_width/2; })
+    .y(function(d) { return P(d.cumulative_precip); });
+
+  var avg_line = d3.svg.line()
+    .x(function(d) { return x(d.date) + day_width/2; })
+    .y(function(d) { return P(+d.avg_total_precip); });
+
+  svgP.selectAll('.area')
+    .data(precip_months)
+    .enter()
+    .append("path")
+    .attr("class", "area")
+    .attr("d", area);
+
+  update_P_tick_lines();
+  
+  svgP.selectAll('.p-line')
+    .data(precip_months)
+    .enter()
+    .append("path")
+    .attr("class", "p-line")
+    .attr("d", line);
+
+  svgP.selectAll('.a-line')
+    .data(precip_months)
+    .enter()
+    .append("path")
+    .attr("class", "a-line")
+    .attr("d", avg_line);
+
+
+  update_x_tick_lines_T();
+  update_x_tick_lines_P();
+  shift_x_tick_labels();
+
+  d3.selectAll(".y.axis")
+    .attr("stroke-width", axis_strokewidth);
+}
+
+function add_y_axes(svg, axis) {
+  svg.append("g")
+    .attr("class", "y axis")
+    .attr("transform", "translate(" + (-axis_strokewidth/2) + ",0)")
+    .call(axis.orient("left"))
+    .selectAll('text')
+    .attr("transform", "translate(" + (-y_label_translate) + ",0)");
+
+  svg.append("g")
+    .attr("class", "y axis")
+    .attr("transform", "translate(" + (width+day_width+axis_strokewidth/2) + ",0)")
+    .call(axis.orient("right"))
+    .selectAll('text')
+    .attr("transform", "translate(" + y_label_translate + ",0)");
+}
+
+function update_T_tick_lines() {
+  var T_ticks = tAxis.scale().ticks(tAxis.ticks()[0]);
+  var tick_ln = svgT.selectAll(".T-tick-line").data(T_ticks);
+  
+  tick_ln.enter().append("line").attr("class", "T-tick-line");
+  tick_ln.exit().remove();
+
+  svgT.selectAll(".T-tick-line")
+    .transition(500)
+    .attr("y1", function(d) { return T(d); } )
+    .attr("y2", function(d) { return T(d); } )
+    .attr("x1", width+day_width+axis_strokewidth)
+    .attr("x2", -axis_strokewidth)
+}
+
+function update_P_tick_lines() {
+  var P_ticks = pAxis.scale().ticks(pAxis.ticks()[0]);
+  var tick_ln = svgP.selectAll(".P-tick-line").data(P_ticks);
+  
+  tick_ln.enter().append("line").attr("class", "P-tick-line");
+  tick_ln.exit().remove();
+
+  svgP.selectAll(".P-tick-line")
+    .transition(500)
+    .attr("y1", function(d) { return P(d); } )
+    .attr("y2", function(d) { return P(d); } )
+    .attr("x1", width+day_width+axis_strokewidth)
+    .attr("x2", -axis_strokewidth)
+}
+
+function update_x_tick_lines_T() {
+  var x_ticks = xAxis.scale().ticks(xAxis.ticks()[0]);
+  var tick_ln = svgT.selectAll(".x-tick-line").data(x_ticks);
+  
+  tick_ln.enter().append("line").attr("class", "x-tick-line");
+  tick_ln.exit().remove();
+
+  svgT.selectAll(".x-tick-line")
+    .transition(500)
+    .attr("x1", function(d) { return x(d); } )
+    .attr("x2", function(d) { return x(d); } )
+    .attr("y1", heightT)
+    .attr("y2", 0);
+}
+
+function update_x_tick_lines_P() {
+  var x_ticks = xAxis.scale().ticks(xAxis.ticks()[0]);
+  var tick_ln = svgP.selectAll(".x-tick-line").data(x_ticks);
+  
+  tick_ln.enter().append("line").attr("class", "x-tick-line");
+  tick_ln.exit().remove();
+
+  svgP.selectAll(".x-tick-line")
+    .transition(500)
+    .attr("x1", function(d) { return x(d); } )
+    .attr("x2", function(d) { return x(d); } )
+    .attr("y1", heightP)
+    .attr("y2", 0)
+}
+
+function shift_x_tick_labels() {
+  var x_ticks = xAxis.scale().ticks(xAxis.ticks()[0]);
+  var x_division_w = x(x_ticks[1]) - x(x_ticks[0]);
+
+  d3.selectAll('.x.axis .tick text')
+    .attr("transform", "translate(" + (x_division_w/2) + ",0)")
+}
+
+function x_formatter(d) {
+  var month_names = ["January", "February", "March", "April", "May", "June", 
+    "July", "August", "September", "October", "November", "December"];
+
+  if (d.getMonth() == 0) { 
+    return month_names[d.getMonth()] + ' ' + d.getFullYear(); 
+  }
+  
+  return month_names[d.getMonth()];
+}
+
+</script>

@@ -1,0 +1,59 @@
+body {
+  font: 14px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.x.axis path {
+  display: none;
+}
+
+.x.axis text {
+  font-weight: bold;
+}
+
+.y.axis path {
+  stroke: grey;
+}
+
+.weather {
+  fill: black;
+}
+
+.avg {
+  fill: grey;
+}
+
+.maxmin {
+  fill: lightgrey;
+}
+
+.T-tick-line, .x-tick-line {
+  fill: none;
+  shape-rendering: crispEdges;
+}
+
+.T-tick-line, .P-tick-line {
+  stroke: white;
+}
+
+.x-tick-line {
+  stroke: black;
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
+
+.area {
+  fill: lightgrey;
+}
+
+.p-line, .a-line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 1.5px;
+}
