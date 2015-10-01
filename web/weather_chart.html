@@ -193,14 +193,125 @@ function ready(error, almanac, precipitation, daily_weather) {
     .attr("class", "a-line")
     .attr("d", avg_line);
 
+  add_precip_text(daily_weather, precipitation, precip_months);
+  update_x_tick_lines_T();
+  update_x_tick_lines_P();
+  shift_x_tick_labels();
+  add_legend();
+  d3.selectAll(".y.axis")
+    .attr("stroke-width", axis_strokewidth);
+}
+
+function add_legend() {
+  var tot_h = 100,
+      text_margin_1 = 5,
+      legend_line_len = 20,
+      legend_line_w = 1;
+
+  var legend = svgT.append('g')
+    .attr('class', 'legend')
+    .attr("transform", "translate(" + (width/2 + 50) + "," + (heightT/2) + ")");
+    
+  // legend.append('rect')
+  //   .attr('width', day_width*2)
+  //   .attr('height', tot_h)
+  //   .attr('class', 'legend-maxmin');
+
+  // legend.append('rect')
+  //   .attr('y', tot_h/4)
+  //   .attr('width', day_width*2)
+  //   .attr('height', tot_h/2)
+  //   .attr('class', 'legend-avg');
+
+  // legend.append('rect')
+  //   .attr('y', tot_h/3)
+  //   .attr('x', day_width*0.5)
+  //   .attr('width', day_width)
+  //   .attr('height', tot_h/2)
+  //   .attr('class', 'legend-weather');
+
+  var rect_data = [{'class': 'legend-maxmin', 'w': day_width*2, 'h': tot_h, 'x': 0, 'y': 0},
+                   {'class': 'legend-avg', 'w': day_width*2, 'h': tot_h/2, 'x': 0, 'y': tot_h/4},
+                   {'class': 'legend-weather', 'w': day_width, 'h': tot_h/2, 'x': day_width/2, 'y': tot_h/3}
+                  ]
+
+  legend.selectAll('rect')
+    .data(rect_data)
+    .enter()
+    .append('rect')
+    .attr('width', function(d) { return d.w; })
+    .attr('height', function(d) { return d.h; })
+    .attr('x', function(d) { return d.x; })
+    .attr('y', function(d) { return d.y; })
+    .attr('class', function(d) { return d.class; });
+
+
+  var text_data = [{'text': 'Record High', 'anchor': 'end', 'x': -text_margin_1, 'y': font_size/2},
+                   {'text': 'Record Low', 'anchor': 'end', 'x': -text_margin_1, 'y': tot_h + font_size/2},
+                   {'text': 'Actual High', 'anchor': 'start', 'x': legend_line_len + text_margin_1/2, 'y': tot_h/3 + font_size/2},
+                   {'text': 'Actual Low', 'anchor': 'start', 'x': legend_line_len + text_margin_1/2, 'y': tot_h/3 + tot_h/2 - 2*legend_line_w + font_size/2},
+                   {'text': 'Normal Range', 'anchor': 'end', 'x': -15, 'y': tot_h/2 + font_size/2}
+                  ];
+
+  legend.selectAll('text')
+    .data(text_data)
+    .enter()
+    .append('text')
+    .text(function(d) { return d.text; })
+    .attr('text-anchor', function(d) { return d.anchor; })
+    .attr('x', function(d) { return d.x; })
+    .attr('y', function(d) { return d.y; });
+
+
+  var line_data = [{'x1': day_width*1.7, 'x2': legend_line_len, 'y1': tot_h/3 + legend_line_w, 'y2': tot_h/3 + legend_line_w},
+                   {'x1': day_width*1.7, 'x2': legend_line_len, 'y1': tot_h/3 + tot_h/2 - legend_line_w, 'y2': tot_h/3 + tot_h/2 - legend_line_w},
+                   {'x1': -5, 'x2': -10, 'y1': tot_h/4 + legend_line_w, 'y2': tot_h/4 + legend_line_w},
+                   {'x1': -5, 'x2': -10, 'y1': 3*tot_h/4 - legend_line_w, 'y2': 3*tot_h/4 - legend_line_w},
+                   {'x1': -10, 'x2': -10, 'y1': tot_h/4 + legend_line_w, 'y2': 3*tot_h/4 - legend_line_w}
+                   ];
+
+  legend.selectAll('line')
+    .data(line_data)
+    .enter()
+    .append('line')
+    .attr('class', 'legend-line')
+    .attr('x1', function(d) { return d.x1; })
+    .attr('x2', function(d) { return d.x2; })
+    .attr('y1', function(d) { return d.y1; })
+    .attr('y2', function(d) { return d.y2; });
+}
+
+function add_precip_text(daily_weather, precipitation, precip_months) {
+
   svgP.selectAll('.normal-text')
     .data(precipitation)
     .enter()
     .append('text')
     .attr('x', function(d) { return x(new Date(2014, +d.month-1, 1)) + day_width; })
     .attr('y', function(d) { return P(+d.h_all_precip) - text_offset_y; })
+    .attr('font-style', 'italic')
     .text(function(d) { return +d.h_all_precip; });
 
+  svgP.append('text')
+    .attr('x', x(new Date(2014, 0, 1)) + day_width)
+    .attr('y', P(+precipitation[0].h_all_precip) - text_offset_y - font_size)
+    .attr('font-style', 'italic')
+    .text('Normal');
+
+  var text_w_actual = 38;
+
+  svgP.append('rect')
+    .attr('x', x(new Date(2014, 0, 31)) - text_w_actual)
+    .attr('y', P(+precip_months[0][precip_months[0].length - 1].cumulative_precip) - text_offset_y - 2*font_size)
+    .attr('width', text_w_actual)
+    .attr('height', font_size)
+    .attr('fill', 'white');
+
+  svgP.append('text')
+    .attr('x', x(new Date(2014, 0, 31)))
+    .attr('y', P(+precip_months[0][precip_months[0].length - 1].cumulative_precip) - text_offset_y - font_size)
+    .attr('text-anchor', 'end')
+    .text('Actual');
 
   var actual_text_g = svgP.selectAll('.actual-text')
     .data(daily_weather)
@@ -217,30 +328,19 @@ function ready(error, almanac, precipitation, daily_weather) {
 
   actual_text_g.append('rect')
     .attr('display', function(d) { return isLastDay(d.date) ? 'block' : 'none'; })
-    .attr('text-anchor', function(d) { return d.date.getDate() > 15 ? 'end' : 'start'; })
     .attr('x', function(d) { return d.date.getDate() > 15 ? x(d.date) - d.width : x(d.date); })
     .attr('y', function(d) { return P(+d.cumulative_precip) - text_offset_y - font_size; })
     .attr('width', function(d) { return d.width; })
     .attr('height', font_size)
-    .attr('opacity', 1)
-    .attr('fill', 'white')
+    .attr('fill', 'white');
 
   actual_text_g.append('text')
     .attr('x', function(d) { return x(d.date); })
     .attr('y', function(d) { return P(+d.cumulative_precip) - text_offset_y; })
     .attr('display', function(d) { return isLastDay(d.date) ? 'block' : 'none'; })
     .attr('text-anchor', function(d) { return d.date.getDate() > 15 ? 'end' : 'start'; })
-    .text(function(d) { return d3.round(+d.cumulative_precip, 1); })
+    .text(function(d) { return d3.round(+d.cumulative_precip, 1); });
 
-
-  // console.log(d3.selectAll('.actual-text text').getBBox())
-
-  update_x_tick_lines_T();
-  update_x_tick_lines_P();
-  shift_x_tick_labels();
-
-  d3.selectAll(".y.axis")
-    .attr("stroke-width", axis_strokewidth);
 }
 
 function add_y_axes(svg, axis) {

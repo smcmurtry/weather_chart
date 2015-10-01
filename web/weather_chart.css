@@ -21,15 +21,15 @@ body {
   stroke: grey;
 }
 
-.weather {
+.weather, .legend-weather {
   fill: black;
 }
 
-.avg {
+.avg, .legend-avg {
   fill: grey;
 }
 
-.maxmin {
+.maxmin, .legend-maxmin {
   fill: lightgrey;
 }
 
@@ -56,4 +56,9 @@ body {
   fill: none;
   stroke: steelblue;
   stroke-width: 1.5px;
+}
+
+.legend-line {
+  stroke: black;
+  stroke-width: 1;
 }
