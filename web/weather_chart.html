@@ -8,10 +8,17 @@
   <link rel="stylesheet" type="text/css" href="weather_chart.css"/>
 </head>
 <body>
-  <div><h2>Yellowknife's Weather</h2></div>
+  <!-- <div><h2>Yellowknife's Weather</h2></div> -->
+  <div class='container'>
+    <div class='desc'><span class='heading'>Temperature</span>
+    <span>Bars represent the range between the daily high and low. <!-- Average temperature for the year was <span id='avg-temp'>x</span>, which is <span id='avg-temp-norm'>y</span> <span id='above-below'>above/below</span> normal. --></span>
+  </div>
   <svg class='temperature-chart'></svg>
-  <!-- <div>Precipitation</div> -->
+  <div class='desc'><span class='heading'>Precipitation</span>
+    <span>Cumulative monthly precipitation in millimeters compared with normal monthly precipitation. <!-- Total precipitation was <span id='tot-precip'></span>mm, <span id='tot-precip-diff'></span>mm <span id='precip-more-less'></span> than normal. --></span>
+  </div>
   <svg class='precipitation-chart'></svg>
+</div>
 </body>
 
 <script>
@@ -26,20 +33,26 @@ var axis_strokewidth = 3,
 
 var parseDate1 = d3.time.format("%Y-%m-%d").parse;
 
-var margin_right = 60, 
-    margin_left = 60,
-    width = 2100 - margin_left - margin_right; 
+var margin_right = 70, 
+    margin_left = 60;
+var width;
 
-var marginT = {top: 50, bottom: 50},
-    heightT = 700 - marginT.top - marginT.bottom;
+if (window.innerWidth >= 1200) {
+  width = 0.95*window.innerWidth - margin_left - margin_right; 
+} else {
+  width = 1200;
+}
 
-var marginP = {top: 50, bottom: 50},
-    heightP = 200 - marginP.top - marginP.bottom;
+var marginT = {top: 30, bottom: 0},
+    heightT = 0.6*window.innerHeight - marginT.top - marginT.bottom;
+
+var marginP = {top: 20, bottom: 50},
+    heightP = 0.25*window.innerHeight - marginP.top - marginP.bottom;
 
 queue()
-  .defer(d3.csv, "../data/almanac/yk_clean.csv")
-  .defer(d3.csv, "../data/precipitation/yk_clean.csv")
-  .defer(d3.csv, "../data/daily_weather/yk_clean.csv")
+  .defer(d3.csv, "../data/almanac/to_clean.csv")
+  .defer(d3.csv, "../data/precipitation/to_clean.csv")
+  .defer(d3.csv, "../data/daily_weather/to_intl_a_clean.csv")
   .await(ready);
 
 var T = d3.scale.linear().range([heightT, 0]);
@@ -96,6 +109,17 @@ function ready(error, almanac, precipitation, daily_weather) {
 
   T.domain([minT, maxT]);
   P.domain([0, d3.max([maxP1, maxP2])]);
+
+  // var tot_precip_norm = d3.sum(precipitation, function(d) { return +d.h_all_precip; });
+  // var tot_precip = d3.sum(daily_weather, function(d) { return +d.h_all_precip; });
+  // d3.select('#tot-precip').html(d3.round(tot_precip, 0));
+  // d3.select('#tot-precip-diff').html(d3.round(Math.abs(tot_precip-tot_precip_norm), 0));
+  // if (tot_precip > tot_precip_norm) {
+  //   d3.select('#precip-more-less').html('more');
+  // } else {
+  //   d3.select('#precip-more-less').html('less');
+  // }
+  // d3.select('#tot-precip-norm').html(tot_precip_norm);
 
   day_width = x(daily_weather[1].date) - x(daily_weather[0].date); 
 
@@ -212,28 +236,11 @@ function add_legend() {
     .attr('class', 'legend')
     .attr("transform", "translate(" + (width/2 + 50) + "," + (heightT/2) + ")");
     
-  // legend.append('rect')
-  //   .attr('width', day_width*2)
-  //   .attr('height', tot_h)
-  //   .attr('class', 'legend-maxmin');
-
-  // legend.append('rect')
-  //   .attr('y', tot_h/4)
-  //   .attr('width', day_width*2)
-  //   .attr('height', tot_h/2)
-  //   .attr('class', 'legend-avg');
-
-  // legend.append('rect')
-  //   .attr('y', tot_h/3)
-  //   .attr('x', day_width*0.5)
-  //   .attr('width', day_width)
-  //   .attr('height', tot_h/2)
-  //   .attr('class', 'legend-weather');
-
-  var rect_data = [{'class': 'legend-maxmin', 'w': day_width*2, 'h': tot_h, 'x': 0, 'y': 0},
+  var rect_data = [{'class': 'legend-background', 'w': 2*tot_h + 10, 'h': tot_h + 2.5*font_size, 'x': -tot_h - 10, 'y': -font_size},
+                   {'class': 'legend-maxmin', 'w': day_width*2, 'h': tot_h, 'x': 0, 'y': 0},
                    {'class': 'legend-avg', 'w': day_width*2, 'h': tot_h/2, 'x': 0, 'y': tot_h/4},
                    {'class': 'legend-weather', 'w': day_width, 'h': tot_h/2, 'x': day_width/2, 'y': tot_h/3}
-                  ]
+                  ];
 
   legend.selectAll('rect')
     .data(rect_data)

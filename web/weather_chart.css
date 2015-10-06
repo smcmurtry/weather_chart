@@ -1,5 +1,11 @@
 body {
   font: 14px sans-serif;
+  text-align: center;
+}
+
+.conainer {
+  margin: auto;
+  text-align: left;
 }
 
 .axis path,
@@ -22,15 +28,15 @@ body {
 }
 
 .weather, .legend-weather {
-  fill: black;
+  fill: #02818a; /*black;*/
 }
 
 .avg, .legend-avg {
-  fill: grey;
+  fill: #67a9cf; /*grey;*/
 }
 
 .maxmin, .legend-maxmin {
-  fill: lightgrey;
+  fill: #bdc9e1; /*lightgrey;*/
 }
 
 .T-tick-line, .x-tick-line {
@@ -61,4 +67,20 @@ body {
 .legend-line {
   stroke: black;
   stroke-width: 1;
+}
+
+.legend-background {
+  fill: white;
+}
+
+.heading {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.desc {
+  margin-left: 70px;
+  margin-top: 20px;
+  text-align: left;
+
 }
