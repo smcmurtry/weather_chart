@@ -3,9 +3,14 @@ body {
   text-align: center;
 }
 
-.conainer {
+.xconainer {
   margin: auto;
   text-align: left;
+}
+
+#search-div {
+  text-align: left;
+  padding-left: 100px;
 }
 
 .axis path,
@@ -53,6 +58,7 @@ body {
   stroke-width: 1;
   stroke-dasharray: 2 2;
 }
+
 
 .area {
   fill: lightgrey;

@@ -5,11 +5,17 @@
   <meta name="description" content="Weather Chart.">
   <script src="d3.v3.min.js"></script>
   <script src="queue.js"></script>
+  <script src="http://code.jquery.com/jquery-1.10.2.js"></script>
+  <script src="typeahead.bundle.min.js"></script>
+  <link rel="stylesheet" href="typeahead.css">
   <link rel="stylesheet" type="text/css" href="weather_chart.css"/>
 </head>
 <body>
   <!-- <div><h2>Yellowknife's Weather</h2></div> -->
-  <div class='container'>
+  <div class='xcontainer'>
+    <div id="search-div">
+        <input class="typeahead form-control" type="text" placeholder="Search for a Canadian city">
+      </div>
     <div class='desc'><span class='heading'>Temperature</span>
     <span>Bars represent the range between the daily high and low. <!-- Average temperature for the year was <span id='avg-temp'>x</span>, which is <span id='avg-temp-norm'>y</span> <span id='above-below'>above/below</span> normal. --></span>
   </div>
@@ -22,6 +28,8 @@
 </body>
 
 <script>
+
+
 
 var svgT, day_width;
 var axis_strokewidth = 3,
@@ -224,7 +232,37 @@ function ready(error, almanac, precipitation, daily_weather) {
   add_legend();
   d3.selectAll(".y.axis")
     .attr("stroke-width", axis_strokewidth);
+
+  init_search_bar();
 }
+
+function init_search_bar() {
+  d3.json('../data/file_dictionary.json', function(data) {
+    
+    var city = new Bloodhound({
+        local: DimOrganization,
+        queryTokenizer: Bloodhound.tokenizers.whitespace,
+        datumTokenizer: Bloodhound.tokenizers.obj.whitespace('organization')
+      });
+
+    var province = new Bloodhound({
+      local: Master,
+      queryTokenizer: Bloodhound.tokenizers.whitespace,
+      datumTokenizer: Bloodhound.tokenizers.obj.whitespace('province')
+    });
+
+    $('.typeahead').typeahead({ highlight: true },
+    {
+      name: 'city', display: 'city', source: city,
+      templates: { header: '<h3 class="search-category">City</h3>' }
+    },
+    {
+      name: 'province', display: 'province', source: province,
+      templates: { header: '<h3 class="search-category">Province</h3>' }
+    });
+
+  })
+};
 
 function add_legend() {
   var tot_h = 100,
